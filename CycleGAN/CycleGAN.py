@@ -1,7 +1,11 @@
 from keras.layers import Layer, Input, Conv2D, Activation, add, BatchNormalization, UpSampling2D, ZeroPadding2D, Conv2DTranspose, Flatten, MaxPooling2D, AveragePooling2D
 # from keras_contrib.layers.normalization import InstanceNormalization, InputSpec
-from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization
-from keras.layers import  InputSpec
+# from keras.layers.normalization.instancenormalization import InstanceNormalization
+
+from tensorflow_addons.layers import InstanceNormalization
+from PIL import Image
+
+from keras.layers import InputSpec
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.core import Dense
 from keras.optimizers import Adam
@@ -23,9 +27,14 @@ import sys
 import os
 
 import keras.backend as K
+
+# import tensorflow.compat.v1 as tf
+# tf.disable_v2_behavior()
 import tensorflow as tf
 
-from . import load_data
+
+
+import load_data
 
 
 np.random.seed(seed=12345)
@@ -222,13 +231,14 @@ class CycleGAN():
 
         # ======= Avoid pre-allocating GPU memory ==========
         # TensorFlow wizardry
-        config = tf.ConfigProto()
+        # config = tf.ConfigProto()
+        config = tf.compat.v1.ConfigProto()
 
         # Don't pre-allocate memory; allocate as-needed
         config.gpu_options.allow_growth = True
-
         # Create a session with the above options specified.
-        K.tensorflow_backend.set_session(tf.Session(config=config))
+        # K.tensorflow_backend.set_session()
+        tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
 
         # ===== Tests ======
         # Simple Model
@@ -650,11 +660,11 @@ class CycleGAN():
 # Help functions
 
     def lse(self, y_true, y_pred):
-        loss = tf.reduce_mean(tf.squared_difference(y_pred, y_true))
+        loss = tf.compat.v1.reduce_mean(tf.compat.v1.squared_difference(y_pred, y_true))
         return loss
 
     def cycle_loss(self, y_true, y_pred):
-        loss = tf.reduce_mean(tf.abs(y_pred - y_true))
+        loss = tf.compat.v1.reduce_mean(tf.compat.v1.abs(y_pred - y_true))
         return loss
 
     def truncateAndSave(self, real_, real, synthetic, reconstructed, path_name):
@@ -674,7 +684,8 @@ class CycleGAN():
         if self.channels == 1:
             image = image[:, :, 0]
 
-        toimage(image, cmin=-1, cmax=1).save(path_name)
+        # toimage(image, cmin=-1, cmax=1).save(path_name)
+        Image.fromarray(image).save(path_name)
 
     def saveImages(self, epoch, real_image_A, real_image_B, num_saved_images=1):
         directory = os.path.join('images', self.date_time)
@@ -856,7 +867,9 @@ class CycleGAN():
             def save_image(image, name, domain):
                 if self.channels == 1:
                     image = image[:, :, 0]
-                toimage(image, cmin=-1, cmax=1).save(os.path.join(
+                # toimage(image, cmin=-1, cmax=1).save(os.path.join(
+                #     'generate_images', 'synthetic_images', domain, name))
+                Image.fromarray(image).save(os.path.join(
                     'generate_images', 'synthetic_images', domain, name))
 
             # Test A images
