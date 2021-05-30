@@ -1,18 +1,18 @@
-from keras.layers import Layer, Input, Conv2D, Activation, add, BatchNormalization, UpSampling2D, ZeroPadding2D, Conv2DTranspose, Flatten, MaxPooling2D, AveragePooling2D
+from tensorflow.keras.layers import Layer, Input, Conv2D, Activation, add, BatchNormalization, UpSampling2D, ZeroPadding2D, Conv2DTranspose, Flatten, MaxPooling2D, AveragePooling2D
 # from keras_contrib.layers.normalization import InstanceNormalization, InputSpec
 # from keras.layers.normalization.instancenormalization import InstanceNormalization
 
 from tensorflow_addons.layers import InstanceNormalization
 from PIL import Image
 
-from keras.layers import InputSpec
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.core import Dense
-from keras.optimizers import Adam
-from keras.backend import mean
-from keras.models import Model, model_from_json
-from keras.utils import plot_model
-from keras.engine.topology import Network
+from tensorflow.keras.layers import InputSpec
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.backend import mean
+from tensorflow.keras.models import Model, model_from_json
+# from tensorflow.keras.utils import plot_model
+# from keras.engine.topology import Network
 
 from collections import OrderedDict
 # from scipy.misc import imsave, toimage  # has depricated
@@ -26,7 +26,7 @@ import csv
 import sys
 import os
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 
 # import tensorflow.compat.v1 as tf
 # tf.disable_v2_behavior()
@@ -41,7 +41,8 @@ np.random.seed(seed=12345)
 
 
 class CycleGAN():
-    def __init__(self, lr_D=2e-4, lr_G=2e-4, image_shape=(304, 256, 1),
+    # def __init__(self, lr_D=2e-4, lr_G=2e-4, image_shape=(304, 256, 1),
+    def __init__(self, lr_D=2e-4, lr_G=2e-4, image_shape=(256, 256, 1),
                  date_time_string_addition='', image_folder='MR'):
         self.img_shape = image_shape
         self.channels = self.img_shape[-1]
@@ -57,7 +58,8 @@ class CycleGAN():
         self.beta_1 = 0.5
         self.beta_2 = 0.999
         self.batch_size = 1
-        self.epochs = 200  # choose multiples of 25 since the models are save each 25th epoch
+        # self.epochs = 200  # choose multiples of 25 since the models are save each 25th epoch
+        self.epochs = 10  # choose multiples of 25 since the models are save each 25th epoch
         self.save_interval = 1
         self.synthetic_pool_size = 50
 
@@ -124,8 +126,11 @@ class CycleGAN():
                          loss_weights=loss_weights_D)
 
         # Use containers to avoid falsy keras error about weight descripancies
-        self.D_A_static = Network(inputs=image_A, outputs=guess_A, name='D_A_static_model')
-        self.D_B_static = Network(inputs=image_B, outputs=guess_B, name='D_B_static_model')
+        # self.D_A_static = Network(inputs=image_A, outputs=guess_A, name='D_A_static_model')
+        # self.D_B_static = Network(inputs=image_B, outputs=guess_B, name='D_B_static_model')
+
+        self.D_A_static = Model(inputs=image_A, outputs=guess_A, name='D_A_static_model')
+        self.D_B_static = Model(inputs=image_B, outputs=guess_B, name='D_B_static_model')
 
         # ======= Generator model ==========
         # Do note update discriminator weights during generator training
@@ -135,7 +140,7 @@ class CycleGAN():
         # Generators
         self.G_A2B = self.modelGenerator(name='G_A2B_model')
         self.G_B2A = self.modelGenerator(name='G_B2A_model')
-        # self.G_A2B.summary()
+        self.G_A2B.summary()
 
         if self.use_identity_learning:
             self.G_A2B.compile(optimizer=self.opt_G, loss='MAE')
@@ -183,7 +188,7 @@ class CycleGAN():
         self.G_model.compile(optimizer=self.opt_G,
                              loss=compile_losses,
                              loss_weights=compile_weights)
-        # self.G_A2B.summary()
+        self.G_A2B.summary()
 
         # ======= Data ==========
         # Use 'None' to fetch all available images
@@ -232,10 +237,10 @@ class CycleGAN():
         # ======= Avoid pre-allocating GPU memory ==========
         # TensorFlow wizardry
         # config = tf.ConfigProto()
-        config = tf.compat.v1.ConfigProto()
-
+        config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
         # Don't pre-allocate memory; allocate as-needed
         config.gpu_options.allow_growth = True
+        config.gpu_options.per_process_gpu_memory_fraction = 0.9
         # Create a session with the above options specified.
         # K.tensorflow_backend.set_session()
         tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
@@ -685,7 +690,10 @@ class CycleGAN():
             image = image[:, :, 0]
 
         # toimage(image, cmin=-1, cmax=1).save(path_name)
-        Image.fromarray(image).save(path_name)
+        new_p = Image.fromarray(image)
+        if new_p.mode != 'RGB':
+            new_p = new_p.convert('RGB')
+        new_p.save(path_name)
 
     def saveImages(self, epoch, real_image_A, real_image_B, num_saved_images=1):
         directory = os.path.join('images', self.date_time)
@@ -869,8 +877,12 @@ class CycleGAN():
                     image = image[:, :, 0]
                 # toimage(image, cmin=-1, cmax=1).save(os.path.join(
                 #     'generate_images', 'synthetic_images', domain, name))
-                Image.fromarray(image).save(os.path.join(
-                    'generate_images', 'synthetic_images', domain, name))
+
+
+                new_p = Image.fromarray(image)
+                if new_p.mode != 'RGB':
+                    new_p = new_p.convert('RGB')
+                new_p.save(os.path.join('generate_images', 'synthetic_images', domain, name))
 
             # Test A images
             for i in range(len(synthetic_images_A)):
