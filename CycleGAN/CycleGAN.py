@@ -59,7 +59,7 @@ class CycleGAN():
         self.beta_2 = 0.999
         self.batch_size = 1
         # self.epochs = 200  # choose multiples of 25 since the models are save each 25th epoch
-        self.epochs = 10  # choose multiples of 25 since the models are save each 25th epoch
+        self.epochs = 200  # choose multiples of 25 since the models are save each 25th epoch
         self.save_interval = 1
         self.synthetic_pool_size = 50
 
@@ -690,10 +690,11 @@ class CycleGAN():
             image = image[:, :, 0]
 
         # toimage(image, cmin=-1, cmax=1).save(path_name)
-        new_p = Image.fromarray(image)
-        if new_p.mode != 'RGB':
-            new_p = new_p.convert('RGB')
-        new_p.save(path_name)
+        # new_p = Image.fromarray(image)
+        # if new_p.mode != 'RGB':
+        #     new_p = new_p.convert('RGB')
+        # new_p.save(path_name)
+        Image.fromarray((image * 255).astype('uint8'), mode='L').save(path_name)
 
     def saveImages(self, epoch, real_image_A, real_image_B, num_saved_images=1):
         directory = os.path.join('images', self.date_time)
@@ -909,6 +910,15 @@ class ReflectionPadding2D(Layer):
         self.padding = tuple(padding)
         self.input_spec = [InputSpec(ndim=4)]
         super(ReflectionPadding2D, self).__init__(**kwargs)
+
+    # add by eric wang
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'padding': self.padding,
+            'input_spec': self.input_spec,
+        })
+        return config
 
     def compute_output_shape(self, s):
         return (s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3])
